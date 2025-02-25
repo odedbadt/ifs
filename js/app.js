@@ -1,5 +1,5 @@
 import * as THREE from 'three'
-import {vec2} from "gl-matrix"
+import {vec2, vec3, mat3} from "gl-matrix"
 //import {Camera, Scene, PlaneBufferGeometry, Vector2, RawShaderMaterial}
 function set_pixel(image_data, w, x, y,r,g,b) {
     const base_offset = (w*Math.floor(y)+Math.floor(x))*4
@@ -9,6 +9,53 @@ function set_pixel(image_data, w, x, y,r,g,b) {
     image_data[base_offset+3] = 255
 
 }
+function build_affine_transformation(p1,p2,p3,q1,q2,q3) {
+    let P = mat3.fromValues(
+        p1[0], p2[0], p3[0],
+        p1[1], p2[1], p3[1],
+        1,         1,         1
+    );
+
+    let Q = mat3.fromValues(
+        q1[0], q2[0], q3[0],
+        q1[1], q2[1], q3[1],
+        1,         1,         1
+    );
+
+    // Invert P
+    let P_inv = mat3.create();
+    if (!mat3.invert(P_inv, P)) {
+        throw new Error("Source points are collinear or invalid for affine transformation.");
+    }
+
+    // Compute A = Q * P^-1
+    let A = mat3.create();
+    mat3.multiply(A, Q, P_inv);
+    A[8] = 1
+    return A;
+}
+function apply_affine_transform(A, point) {
+    // Convert vec2 to homogeneous coordinates (vec3)
+    let homogeneousPoint = [point[0], point[1], 1];
+
+    // Multiply A * homogeneousPoint
+    let transformedPoint = vec2.create();
+    transformedPoint[0] = A[0] * homogeneousPoint[0] + A[3] * homogeneousPoint[1] + A[6]; // x'
+    transformedPoint[1] = A[1] * homogeneousPoint[0] + A[4] * homogeneousPoint[1] + A[7]; // y'
+
+    return transformedPoint;
+}
+console.log(apply_affine_transform(
+    build_affine_transformation(
+        vec2.fromValues(0,0),
+        vec2.fromValues(1,0),
+        vec2.fromValues(0,1),
+        vec2.fromValues(0,0),
+        vec2.fromValues(0.5,0),
+        vec2.fromValues(0,0.5)
+        
+        
+        ), vec2.fromValues(1,1)))
 class App {
 
     constructor() {
@@ -32,8 +79,7 @@ class App {
     }
     init() {
         this.init_size()
-        this.init_mouse_events()
-        this.init_scroll()
+
         this.animate()
     }
     render() {
@@ -42,17 +88,57 @@ class App {
     }
     animate() {
         const ifs_context = this.ifs_canvas.getContext('2d');
-        const base_iteration = (p, v) => {
-            const out = vec2.create()
-            vec2.add(out, p, v)
-            vec2.scale(out, out, .5)
-            return out
-        }
+        // const base_iteration = (p, v) => {
+        //     const out = vec2.create()
+        //     vec2.add(out, p, v)
+        //     vec2.scale(out, out, .5)
+        //     return out
+        // }
         const t30= 0.5/Math.tan(Math.PI/6)
+        // const possible_iterations = [
+        //     (v) => base_iteration(vec2.fromValues(0,1),v),
+        //     (v) => base_iteration(vec2.fromValues(1,1),v),
+        //     (v) => base_iteration(vec2.fromValues(0.5,1-t30),v)
+        // ]
+        const base_iteration = (A,v) => {
+            let out3 = vec3.fromValues(v[0], v[1], v[2])
+            mat3.multiply
+
+
+        }
         const possible_iterations = [
-            (v) => base_iteration(vec2.fromValues(0,1),v),
-            (v) => base_iteration(vec2.fromValues(1,1),v),
-            (v) => base_iteration(vec2.fromValues(0.5,1-t30),v)
+            (v) => apply_affine_transform(
+                build_affine_transformation(
+                    vec2.fromValues(0,0),
+                    vec2.fromValues(1,0),
+                    vec2.fromValues(0,1),
+                    vec2.fromValues(0,0),
+                    vec2.fromValues(0.5,0),
+                    vec2.fromValues(0,0.5)
+                    
+                    
+                    ), v
+            ),
+            (v) => apply_affine_transform(
+                build_affine_transformation(
+                    vec2.fromValues(0,0),
+                    vec2.fromValues(1,0),
+                    vec2.fromValues(0,1),
+                    vec2.fromValues(0.5,0),
+                    vec2.fromValues(1,0),
+                    vec2.fromValues(0.5,0.5)                
+                    ), v
+            ),
+            (v) => apply_affine_transform(
+                build_affine_transformation(
+                    vec2.fromValues(0,0),
+                    vec2.fromValues(1,0),
+                    vec2.fromValues(0,1),
+                    vec2.fromValues(0,0,0.5),
+                    vec2.fromValues(0.5,0.5,0),
+                    vec2.fromValues(0,1)                
+                    ), v
+            ),
         ]
         const w = this.ifs_canvas.width
         const h = this.ifs_canvas.height
@@ -90,90 +176,7 @@ class App {
         window.addEventListener('resize', onWindowResize, false);
 
     }
-    init_mouse_events() {
-        // non symmetrical application of zoom as written in shader:
-        // dist2(u_mouse_coord.xy, coord*u_zoom+u_resolution.xy/2.0) < 100.0)
-        // coord = 
-        const h_w = this.ifs_canvas.width/2
-        const h_h = this.ifs_canvas.height/2;
-        console.log('HW', h_w)
-        console.log('HW', h_h)
-        const dist2z = (mouse_coord_v2, root_arr) => 
-            (mouse_coord_v2.x-(root_arr[0]*this.zoom +h_w))*(mouse_coord_v2.x-(root_arr[0]*this.zoom +h_w))+
-            (mouse_coord_v2.y-(root_arr[1]*this.zoom +h_h))*(mouse_coord_v2.y-(root_arr[1]*this.zoom +h_h))
-        this.ifs_canvas.addEventListener('mousedown', (e) => {
-            this.mouse = this.event_to_mouse_coords(e)
-            console.log(this.mouse);
-            for (let j = 0; j < this.n; ++j) {
-                if (dist2z(this.mouse, this.roots[j]) < 100*this.dpr*this.dpr) {
-                    this._dragged_root = j;
-
-                }
-            }
-            this.dirty = true
-        })
-        this.ifs_canvas.addEventListener('mousemove', (e) => {
-            this.mouse = this.event_to_mouse_coords(e)
-            const coord = this.event_to_complex_coords(e)
-            //console.log(coord)
-            if (this._dragged_root != null) {
-              //  console.log('D',this._dragged_root)
-                this.roots[this._dragged_root] = [coord.x,coord.y]
-            }        
-            this.dirty = true
-        })
-        this.ifs_canvas.addEventListener('mouseup', (e) => {
-            this._dragged_root = null;
-            this.dirty = true
-        })
-    }
-    init_scroll() {
-        this.ifs_canvas.addEventListener('wheel', (event) => {
-            event.preventDefault()
-            // Get the modifiers pressed
-            const ctrl_key = event.ctrlKey;
-          
-            // Access scroll properties
-            const deltaX = event.deltaX; // Horizontal scroll
-            const deltaY = event.deltaY; // Vertical scroll
-          
-          
-            // Perform actions based on modifiers and scroll direction
-            if (ctrl_key) {
-                // Zoom:;
-                // view_port.h, w changes
-                // cursor in before and in after change has to be contant
-                // const art_x_before_zoom = this.state.view_port.x + event.offsetX  / 
-                // this.view_canvas.clientWidth * this.state.view_port.w;
-                /* equations:
-                // view_port_x_before + cursor_x*view_port_w_before / view_canvas_w = 
-                // view_port_x_after + cursor_x*view_port_w_after  / view_canvas_w
-                // view_port_y_before + cursor_x*view_port_h_before / view_canvas_h = 
-                // view_port_y_after + cursor_x*view_port_h_after  / view_canvas_h
-                // thus:
-                // view_port_y_after = view_port_y_before + cursor_y*(view_port_h_before-view_port_h_after) / view_canvas_h
-                // view_port_x_after = view_port_x_before + cursor_x*(view_port_w_before-view_port_w_after) / view_canvas_w
-                // view_port_y_after = view_port_y_before + cursor_y*deltaY/ view_canvas_h
-                // view_port_x_after = view_port_y_after*aspect;
-                */
-                this.zoom = this.zoom + deltaY;
-                // const aspect = this.state.view_port.w / this.state.view_port.h;
-                // const ratio_h = Math.exp(deltaY/1000);
-                // const delta_h = this.state.view_port.h*(ratio_h-1)
-                // this.state.view_port.y = this.state.view_port.y - event.offsetY * delta_h/ this.view_canvas.clientHeight;
-                // this.state.view_port.x = this.state.view_port.x - event.offsetX * delta_h*aspect/ this.view_canvas.clientWidth;
-                // this.state.view_port.h = Math.max(1, this.state.view_port.h*ratio_h)
-                // this.state.view_port.w = this.state.view_port.h*aspect;
-            } else {
-                // this.state.view_port.y = Math.max(0, this.state.view_port.y+deltaY/ this.view_canvas.clientHeight*100)
-                // this.state.view_port.x = Math.max(0, this.state.view_port.x+deltaX/ this.view_canvas.clientWidth*100)
-            }
-            this.dirty = true
-
-
-            
-        });
-    }
+    
         
 }
 
