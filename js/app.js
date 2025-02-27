@@ -49,7 +49,7 @@ class App {
 
     constructor(definition_points) {
         this.ifs_canvas = document.getElementById('ifs-canvas');
-        this.ifs_context = this.ifs_canvas.getContext('2d');
+        this.ifs_context = this.ifs_canvas.getContext('2d', {'willReadFrequently': true});
         this.w = this.ifs_canvas.width
         this.h = this.ifs_canvas.height          
         this.dpr= window.devicePixelRatio;
@@ -78,7 +78,7 @@ class App {
         this.define_handles();
         this.draw_definition_points();
 
-        this.animate()
+        //this.animate()
     }
     render() {
         
@@ -216,28 +216,35 @@ class App {
             }
             this.ifs_context.save()
             this.ifs_context.lineWidth = 0.5
-            const l = arr.length
+            const l = arr.length // 12
+            const hl = l/2 // 6
             for (let j = 0; j < l; j+=2) {
+                // 2*3*2
+                const m = Math.floor(j/6) 
+                const n = j % 6
+                const next_in_tri = ((m + 1) % 2)*6+n
+                const in_next_tri = m*6+((n + 2) % 6)                 
                 const x1 = arr[j]
                 const y1 = arr[j+1]    
-                const x2 = arr[(j+2) % l]
-                const y2 = arr[(j+3) % l]
-                const x3 = arr[(j+6) % l]
-                const y3 = arr[(j+7) % l]
+                const x2 = arr[next_in_tri]
+                const y2 = arr[next_in_tri+1]
+                const x3 = arr[in_next_tri]
+                const y3 = arr[in_next_tri+1]
+                if (j < 6) {
                 this.ifs_context.beginPath();
                 this.ifs_context.moveTo(x1*w, y1*h);
                 this.ifs_context.lineTo(x2*w, y2*h);
                 this.ifs_context.strokeStyle = 'black'
                 this.ifs_context.lineWidth = 2
-                this.ifs_context.setLineDash([])       
-
                 this.ifs_context.stroke();
+                } else {
                 this.ifs_context.beginPath();          
                 this.ifs_context.moveTo(x1*w, y1*h);
                 this.ifs_context.lineTo(x3*w, y3*h);
-                this.ifs_context.setLineDash([15,15])       
-                this.ifs_context.lineWidth = 0.5
+                this.ifs_context.strokeStyle = 'red'                
+                this.ifs_context.lineWidth = 1
                 this.ifs_context.stroke();          
+                }
             }
             this.ifs_context.restore()
 
