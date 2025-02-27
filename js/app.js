@@ -1,5 +1,9 @@
 import * as THREE from 'three'
 import {vec2, vec3, mat3} from "gl-matrix"
+(window).vec2 = vec2;
+(window).vec3 = vec3;
+(window).mat3 = mat3;
+
 //import {Camera, Scene, PlaneBufferGeometry, Vector2, RawShaderMaterial}
 function set_pixel(image_data, w, x, y,r,g,b) {
     const base_offset = (w*Math.floor(y)+Math.floor(x))*4
@@ -11,15 +15,15 @@ function set_pixel(image_data, w, x, y,r,g,b) {
 }
 function build_affine_transformation(p1,p2,p3,q1,q2,q3) {
     let P = mat3.fromValues(
-        p1[0], p2[0], p3[0],
-        p1[1], p2[1], p3[1],
-        1,         1,         1
+        p1[0], p1[1], 1,
+        p2[0], p2[1], 1,
+        p3[0], p3[1], 1,
     );
 
     let Q = mat3.fromValues(
-        q1[0], q2[0], q3[0],
-        q1[1], q2[1], q3[1],
-        1,         1,         1
+        q1[0], q1[1], 1,
+        q2[0], q2[1], 1,
+        q3[0], q3[1], 1,
     );
 
     // Invert P
@@ -31,31 +35,16 @@ function build_affine_transformation(p1,p2,p3,q1,q2,q3) {
     // Compute A = Q * P^-1
     let A = mat3.create();
     mat3.multiply(A, Q, P_inv);
-    A[8] = 1
     return A;
 }
-function apply_affine_transform(A, point) {
+function apply_affine_transform(A, v) {
     // Convert vec2 to homogeneous coordinates (vec3)
-    let homogeneousPoint = [point[0], point[1], 1];
-
-    // Multiply A * homogeneousPoint
-    let transformedPoint = vec2.create();
-    transformedPoint[0] = A[0] * homogeneousPoint[0] + A[3] * homogeneousPoint[1] + A[6]; // x'
-    transformedPoint[1] = A[1] * homogeneousPoint[0] + A[4] * homogeneousPoint[1] + A[7]; // y'
-
-    return transformedPoint;
+    let v3 = vec3.fromValues(v[0], v[1], 1); // Convert vec2 → vec3 (homogeneous coords)
+    let result = vec3.create();
+    vec3.transformMat3(result, v3, A);
+    return result//vec2.fromValues(result[0], result[1]); // Drop homogeneous coordinate
 }
-console.log(apply_affine_transform(
-    build_affine_transformation(
-        vec2.fromValues(0,0),
-        vec2.fromValues(1,0),
-        vec2.fromValues(0,1),
-        vec2.fromValues(0,0),
-        vec2.fromValues(0.5,0),
-        vec2.fromValues(0,0.5)
-        
-        
-        ), vec2.fromValues(1,1)))
+
 class App {
 
     constructor() {
@@ -134,8 +123,8 @@ class App {
                     vec2.fromValues(0,0),
                     vec2.fromValues(1,0),
                     vec2.fromValues(0,1),
-                    vec2.fromValues(0,0,0.5),
-                    vec2.fromValues(0.5,0.5,0),
+                    vec2.fromValues(0,0.5),
+                    vec2.fromValues(0.5,0.5),
                     vec2.fromValues(0,1)                
                     ), v
             ),
@@ -188,6 +177,7 @@ function app_ignite() {
     const url_params = new URLSearchParams(url.search)
     const root_count = (url_params && url_params.get("root_count")) || 5;
     window._app = new App(root_count);
+    
     window._app.init();
 }
 
