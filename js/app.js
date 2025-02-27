@@ -78,7 +78,7 @@ class App {
         this.define_handles();
         this.draw_definition_points();
 
-        //this.animate()
+        this.animate()
     }
     render() {
         
@@ -222,29 +222,26 @@ class App {
                 // 2*3*2
                 const m = Math.floor(j/6) 
                 const n = j % 6
-                const next_in_tri = ((m + 1) % 2)*6+n
-                const in_next_tri = m*6+((n + 2) % 6)                 
+                const in_next_tri = ((m + 1) % 2)*6+n
+                const next_in_tri = m*6+((n + 2) % 6)                 
                 const x1 = arr[j]
                 const y1 = arr[j+1]    
                 const x2 = arr[next_in_tri]
                 const y2 = arr[next_in_tri+1]
                 const x3 = arr[in_next_tri]
                 const y3 = arr[in_next_tri+1]
-                if (j < 6) {
                 this.ifs_context.beginPath();
                 this.ifs_context.moveTo(x1*w, y1*h);
                 this.ifs_context.lineTo(x2*w, y2*h);
                 this.ifs_context.strokeStyle = 'black'
                 this.ifs_context.lineWidth = 2
                 this.ifs_context.stroke();
-                } else {
                 this.ifs_context.beginPath();          
                 this.ifs_context.moveTo(x1*w, y1*h);
                 this.ifs_context.lineTo(x3*w, y3*h);
                 this.ifs_context.strokeStyle = 'red'                
                 this.ifs_context.lineWidth = 1
                 this.ifs_context.stroke();          
-                }
             }
             this.ifs_context.restore()
 
