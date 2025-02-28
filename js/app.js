@@ -73,16 +73,16 @@ class App {
     }
     init_iterations() {
         this.possible_iterations = []
+        const arr0 = this.definition_points[0] 
         for (let k = 0; k < this.definition_points.length; ++k) {
             const arr = this.definition_points[k] 
             const M = build_affine_transformation(
-                    vec2.fromValues(arr[0],arr[1]),
-                    vec2.fromValues(arr[2],arr[3]),
-                    vec2.fromValues(arr[4],arr[5]),
-                    vec2.fromValues(arr[6],arr[7]),
-                    vec2.fromValues(arr[8],arr[9]),
-                    vec2.fromValues(arr[10],arr[11]),
-                    )
+                vec2.fromValues(arr0[0],arr0[1]),
+                vec2.fromValues(arr0[2],arr0[3]),
+                vec2.fromValues(arr0[4],arr0[5]),
+                vec2.fromValues(arr[0],arr[1]),
+                vec2.fromValues(arr[2],arr[3]),
+                vec2.fromValues(arr[4],arr[5]))
             this.possible_iterations.push(
                 (v) => apply_affine_transform(M,v)
             )
@@ -203,32 +203,32 @@ class App {
             }
             this.ifs_context.save()
             this.ifs_context.lineWidth = 0.5
-            const l = arr.length // 12
+            const l = arr.length // 6
             const hl = l/2 // 6
             for (let j = 0; j < l; j+=2) {
                 // 2*3*2
                 const m = Math.floor(j/6) 
                 const n = j % 6
-                const in_next_tri = ((m + 1) % 2)*6+n
-                const next_in_tri = m*6+((n + 2) % 6)                 
+                // const in_next_tri = ((m + 1) % 2)*6+n
+                const next_in_tri = (j + 2) % 6// m*6+((n + 2) % 6)                 
                 const x1 = arr[j]
                 const y1 = arr[j+1]    
                 const x2 = arr[next_in_tri]
                 const y2 = arr[next_in_tri+1]
-                const x3 = arr[in_next_tri]
-                const y3 = arr[in_next_tri+1]
+                // const x3 = arr[in_next_tri]
+                // const y3 = arr[in_next_tri+1]
                 this.ifs_context.beginPath();
                 this.ifs_context.moveTo(x1*w, y1*h);
                 this.ifs_context.lineTo(x2*w, y2*h);
                 this.ifs_context.strokeStyle = 'black'
-                this.ifs_context.lineWidth = 2
+                this.ifs_context.lineWidth = k == 0 ? 2 : 0.5
                 this.ifs_context.stroke();
-                this.ifs_context.beginPath();          
-                this.ifs_context.moveTo(x1*w, y1*h);
-                this.ifs_context.lineTo(x3*w, y3*h);
-                this.ifs_context.strokeStyle = 'red'                
-                this.ifs_context.lineWidth = 1
-                this.ifs_context.stroke();          
+                // this.ifs_context.beginPath();          
+                // this.ifs_context.moveTo(x1*w, y1*h);
+                // this.ifs_context.lineTo(x3*w, y3*h);
+                // this.ifs_context.strokeStyle = 'red'                
+                // this.ifs_context.lineWidth = 1
+                // this.ifs_context.stroke();          
             }
             this.ifs_context.restore()
 
@@ -244,7 +244,7 @@ class App {
 
             this.ifs_context.fillStyle = 'black'
             this.ifs_context.beginPath();
-            this.ifs_context.ellipse(x1*w, y1*h, 15, 15, 0, 0, Math.PI * 2);
+            this.ifs_context.ellipse(x1*w, y1*h, 5, 5, 0, 0, Math.PI * 2);
             this.ifs_context.fill();    
             this.ifs_context.beginPath();
             this.ifs_context.ellipse(x2*w, y2*h, 5, 5, 0, 0, Math.PI * 2);
@@ -290,7 +290,6 @@ class App {
             }
             for (let j = 0; j< this.hit.length; ++j) {
                 const handle = this.hit[j]
-                console.log(handle)
                 this.definition_points[handle[2]][handle[3]] = event.offsetX*window.devicePixelRatio/this.w
                 this.definition_points[handle[2]][handle[3]+1] = event.offsetY*window.devicePixelRatio/this.h
             }
@@ -310,20 +309,14 @@ class App {
 const SIERPINSKY = [[
             0,0,
             1,0,
-            0,1,
+            0,1],[
             0,0,
             0.5,0,
             0,0.5
-],[0,0,
-            1,0,
-            0,1,
-            0.5,0,
+],[0.5,0,
             1,0,
             0.5,0.5],
-    [0,0,
-         1,0,
-         0,1,
-         0,0.5,
+    [0,0.5,
          0.5,0.5,
             0,1
 ]]
