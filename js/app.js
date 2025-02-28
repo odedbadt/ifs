@@ -58,19 +58,6 @@ class App {
         this.definition_points = definition_points
         this.definition_point_handles = []
     }
-
-
-
-    event_to_complex_coords(e) {
-        return new THREE.Vector2((e.offsetX * this.dpr
-    -this.ifs_canvas.width/2)/this.zoom,
-    -(e.offsetY * this.dpr
-    -this.ifs_canvas.height/2)/this.zoom)
-    }
-    event_to_mouse_coords(e) {
-        return new THREE.Vector2(e.offsetX * this.dpr,
-        (this.ifs_canvas.height - e.offsetY * this.dpr))
-    }
     init() {
         this.init_size()
         this.init_mouse()
@@ -294,7 +281,8 @@ class App {
         this.hit = null
         this.ifs_canvas.addEventListener('mousedown', (event) => {
             this.hit = this.handle_to_point_indices(vec2.fromValues(
-                event.offsetX/this.w, event.offsetY/this.h))
+                event.offsetX*window.devicePixelRatio/this.w, 
+                event.offsetY*window.devicePixelRatio/this.h))
         })
         this.ifs_canvas.addEventListener('mousemove', (event) => {
             if (this.hit == null) {
@@ -303,8 +291,8 @@ class App {
             for (let j = 0; j< this.hit.length; ++j) {
                 const handle = this.hit[j]
                 console.log(handle)
-                this.definition_points[handle[2]][handle[3]] = event.offsetX/this.w
-                this.definition_points[handle[2]][handle[3]+1] = event.offsetY/this.h
+                this.definition_points[handle[2]][handle[3]] = event.offsetX*window.devicePixelRatio/this.w
+                this.definition_points[handle[2]][handle[3]+1] = event.offsetY*window.devicePixelRatio/this.h
             }
             this.define_handles()
             this.draw_definition_points(true)
