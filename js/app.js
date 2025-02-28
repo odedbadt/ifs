@@ -3,7 +3,16 @@ import {vec2, vec3, mat3} from "gl-matrix"
 (window).vec2 = vec2;
 (window).vec3 = vec3;
 (window).mat3 = mat3;
-
+const BASE_COLORS = [
+    'black',
+    'red',
+    'blue',
+    'green',
+    'cyan',
+    [1,1,1],
+    [1,0,1],
+    [1,1,1],
+]
 //import {Camera, Scene, PlaneBufferGeometry, Vector2, RawShaderMaterial}
 function set_pixel(image_data, w, x, y,r,g,b) {
     const base_offset = (w*Math.floor(y)+Math.floor(x))*4
@@ -66,10 +75,6 @@ class App {
         this.draw_definition_points();
 
         this.animate()
-    }
-    render() {
-        
-
     }
     init_iterations() {
         this.possible_iterations = []
@@ -196,10 +201,14 @@ class App {
             for (let j = 0; j < arr.length; j+=2) {
                 const x1 = arr[j]
                 const y1 = arr[j+1]    
-                this.ifs_context.fillStyle = 'black'
+                this.ifs_context.fillStyle = BASE_COLORS[k]
+                this.ifs_context.strokeStyle = BASE_COLORS[j/2+1]
                 this.ifs_context.beginPath();
-                this.ifs_context.ellipse(x1*w, y1*h, 15, 15, 0, 0, Math.PI * 2);
+                this.ifs_context.ellipse(x1*w, y1*h, 5, 5, 0, 0, Math.PI * 2);
                 this.ifs_context.fill();                  
+                this.ifs_context.lineWidth = 2
+                this.ifs_context.stroke()
+                this.ifs_context.beginPath();
             }
             this.ifs_context.save()
             this.ifs_context.lineWidth = 0.5
@@ -220,8 +229,8 @@ class App {
                 this.ifs_context.beginPath();
                 this.ifs_context.moveTo(x1*w, y1*h);
                 this.ifs_context.lineTo(x2*w, y2*h);
-                this.ifs_context.strokeStyle = 'black'
-                this.ifs_context.lineWidth = k == 0 ? 2 : 0.5
+                this.ifs_context.strokeStyle = BASE_COLORS[k]
+                this.ifs_context.lineWidth = k == 0 ? 5 : 0.5
                 this.ifs_context.stroke();
                 // this.ifs_context.beginPath();          
                 // this.ifs_context.moveTo(x1*w, y1*h);
@@ -237,26 +246,28 @@ class App {
         for (let k = 0; k < this.definition_point_handles.length; ++k) {
             const v1 = this.definition_point_handles[k][1]
             const v2 = this.definition_point_handles[k][0]
+            const idx = this.definition_point_handles[k][2]
+            const idx2 = this.definition_point_handles[k][3]/2
             const x1 = v1[0]
             const y1 = v1[1]
             const x2 = v2[0]
             const y2 = v2[1]
 
-            this.ifs_context.fillStyle = 'black'
-            this.ifs_context.beginPath();
-            this.ifs_context.ellipse(x1*w, y1*h, 5, 5, 0, 0, Math.PI * 2);
-            this.ifs_context.fill();    
+            this.ifs_context.fillStyle = BASE_COLORS[idx]
+            // this.ifs_context.beginPath();
+            // this.ifs_context.ellipse(x1*w, y1*h, 5, 5, 0, 0, Math.PI * 2);
+            // this.ifs_context.fill();    
             this.ifs_context.beginPath();
             this.ifs_context.ellipse(x2*w, y2*h, 5, 5, 0, 0, Math.PI * 2);
             this.ifs_context.fill();    
-            this.ifs_context.strokeStyle = 'white'
+            this.ifs_context.strokeStyle = BASE_COLORS[idx2]
+            this.ifs_context.lineWidth=2
             this.ifs_context.stroke();
             this.ifs_context.beginPath();
             this.ifs_context.moveTo(x1*w, y1*h);
             this.ifs_context.lineTo(x2*w, y2*h);
-            this.ifs_context.fillStyle = 'white'
-            this.ifs_context.strokeStyle = 'black'
-            this.ifs_context.fill();    
+            this.ifs_context.strokeStyle = BASE_COLORS[k]
+            this.ifs_context.lineWidth=1
             this.ifs_context.stroke();
 
             
