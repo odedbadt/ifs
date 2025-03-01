@@ -373,11 +373,25 @@ const BUG1_WOW = [[
     0.5, 0.5,
     0, 0
 ]]
+const FERN = [[
+    0,0,
+    0,1,
+    1,0,
+],
+[ 0.  ,  0.  ,  0.  ,  0.16,  0.  ,  0.16],
+       [ 0.  ,  1 ,  0.04,  0.85,  0.89,  .41],
+       [ 0.  ,  1 ,  0.26,  0.22,  0.06,  .05],
+       [ 0.  ,  0.4,  0.2,  0.24,  0.13,  0.94]
+]
+// 0	0	0	0.16	0	0	0.01	Stem
+// f2	0.85	0.04	−0.04	0.85	0	1.60	0.85	Successively smaller leaflets
+// f3	0.20	−0.26	0.23	0.22	0	1.60	0.07	Largest left-hand leaflet
+// f4	−0.15	0.28	0.26	0.24	0	0.44	0.07	Largest right-hand leaflet
 function app_ignite() {
     const url = new URL(window.location.href);
     const url_params = new URLSearchParams(url.search)
     const root_count = (url_params && url_params.get("root_count")) || 5;
-    window._app = new App(SIERPINSKY2);
+    window._app = new App(FERN);
 
     window._app.init();
 }
