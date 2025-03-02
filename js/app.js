@@ -66,15 +66,20 @@ class App {
         this.dirty = true
         this.definition_points = definition_points
         this.definition_point_handles = []
+        this.draw_fractal = true;
+        this.draw_control_points = true
     }
     init() {
         this.init_size()
         this.init_mouse()
         this.init_iterations()
         this.define_handles();
-        this.draw_definition_points();
-
-        this.animate()
+        if (document.getElementById('control-points').checked) {
+            this.draw_definition_points();
+        }
+        if (document.getElementById('fractal').checked) {
+            this.animate()
+        }
     }
     init_iterations() {
         this.possible_iterations = []
@@ -116,11 +121,16 @@ class App {
         this.p = vec2.fromValues(Math.random(), Math.random())
         ifs_context.fillStyle = 'black'
         const add_point = () => {
+            if (this.dirty) {
+                this.ifs_context.clearRect(0, 0, this.w, this.h)
+                this.dirty = false;
+            }
             if (this.p == null) {
                 this.p = vec2.fromValues(Math.random(), Math.random())
             }
-
-            this.draw_definition_points(false)
+            if (this.draw_control_points) {
+                this.draw_definition_points(false)
+            }
             const image_data = ifs_context.getImageData(0, 0, w, h);
             const data = image_data.data
             
@@ -135,10 +145,13 @@ class App {
             }
 
             ifs_context.putImageData(image_data, 0, 0)
+            if (this.draw_fractal) {
             setTimeout(add_point, 10)
+            }
         }
-
-        setTimeout(add_point, 100)
+        if (this.draw_fractal) {
+            setTimeout(add_point, 100)
+        }
 
     }
     count_handles_to_point(v) {
@@ -184,7 +197,6 @@ class App {
                 const cnt = this.count_handles_to_point(vec2.fromValues(x1, y1))
                 const multip = this.count_point_multiplicity(vec2.fromValues(x1, y1))
                 if (multip == 0) {
-                    console.log(k, j, multip)
                     continue
                 }
                 const ang = 2 * Math.PI / multip * cnt
@@ -297,6 +309,9 @@ class App {
     init_mouse() {
         this.hit = null
         this.ifs_canvas.addEventListener('mousedown', (event) => {
+            if (!this.draw_control_points) {
+                return
+            }
             this.hit = this.handle_to_point_indices(vec2.fromValues(
                 event.offsetX * window.devicePixelRatio / this.w,
                 event.offsetY * window.devicePixelRatio / this.h))
@@ -311,12 +326,22 @@ class App {
                 this.definition_points[handle[2]][handle[3] + 1] = event.offsetY * window.devicePixelRatio / this.h
             }
             this.define_handles()
-            this.draw_definition_points(true)
+            if (this.draw_control_points) {
+                this.draw_definition_points(true)
+            }
             this.init_iterations()
         })
         this.ifs_canvas.addEventListener('mouseup', (event) => {
             this.hit = null;
         })
+        const inputs = document.getElementsByTagName('input')
+        for (let input of inputs) {
+            input.addEventListener('change', () => {
+                this.dirty = true;
+                this.draw_fractal = document.getElementById('fractal').checked
+                this.draw_control_points = document.getElementById('control-points').checked
+            })
+        }
     }
 
 }
