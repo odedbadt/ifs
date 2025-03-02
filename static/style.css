@@ -2,4 +2,8 @@
    cursor:crosshair;
    width: 600px;
    height: 600px;
+   top:50px;
+   left: 50px;
+   position: absolute;
+   border: 1px solid black;
 }

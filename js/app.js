@@ -119,6 +119,10 @@ class App {
             this.draw_definition_points(false)
             const image_data = ifs_context.getImageData(0, 0, w, h);
             const data = image_data.data
+            if (Math.random() < 0.1) {
+                p0 = vec2.fromValues(Math.random(), Math.random())
+            }
+        
             for (let k = 0; k < 1000; ++k) {
                 ifs_context.beginPath()
                 set_pixel(data, w, p0[0] * w, p0[1] * h, 0, 0, 0)
@@ -201,10 +205,10 @@ class App {
             for (let j = 0; j < arr.length; j += 2) {
                 const x1 = arr[j]
                 const y1 = arr[j + 1]
-                this.ifs_context.fillStyle = BASE_COLORS[k]
-                this.ifs_context.strokeStyle = BASE_COLORS[j / 2 + 1]
+                this.ifs_context.fillStyle = BASE_COLORS[j / 2 + 1]
+                this.ifs_context.strokeStyle = BASE_COLORS[k]
                 this.ifs_context.beginPath();
-                this.ifs_context.ellipse(x1 * w, y1 * h, 5, 5, 0, 0, Math.PI * 2);
+                this.ifs_context.ellipse(x1 * w, y1 * h, 15, 15, 0, 0, Math.PI * 2);
                 this.ifs_context.fill();
                 this.ifs_context.lineWidth = 2
                 this.ifs_context.stroke()
@@ -383,6 +387,11 @@ const FERN = [[
        [ 0.  ,  1 ,  0.26,  0.22,  0.06,  .05],
        [ 0.  ,  0.4,  0.2,  0.24,  0.13,  0.94]
 ]
+const FERN_WIP = [
+    [0,0.008305647840531562,0.013289036544850499,0.9916943521594684,1,0],
+    [0.3588039867109635,0.29069767441860467,0.11461794019933555,0.132890365448505,0.42524916943521596,0.22757475083056478],
+    [0.49667774086378735,0.20431893687707642,0.659468438538206,0.5614617940199336,0.41029900332225916,0.3122923588039867],[0.4335548172757475,0.1378737541528239,0.43853820598006643,0.0016611295681063123,0.4750830564784053,0.018272425249169437],[0.31727574750830567,0.059800664451827246,0.046511627906976744,0.9186046511627907,0.739202657807309,0.6079734219269103]]
+const FERN_WIP2 = [[0.521594684385382,0.6794019933554817,0.287375415282392,0.2691029900332226,0.8554817275747508,0.28903654485049834],[0.26578073089701,0.45348837209302323,0.5166112956810631,0.3803986710963455,0.521594684385382,0.46511627906976744],[0.5548172757475083,0.4069767441860465,0.5,0.2807308970099668,0.5730897009966778,0.28903654485049834],[0.526578073089701,0.6129568106312292,0.33554817275747506,0.3106312292358804,0.8023255813953488,0.3122923588039867],[0.8172757475083057,0.4900332225913621,0.5980066445182725,0.38205980066445183,0.5664451827242525,0.473421926910299]]
 // 0	0	0	0.16	0	0	0.01	Stem
 // f2	0.85	0.04	−0.04	0.85	0	1.60	0.85	Successively smaller leaflets
 // f3	0.20	−0.26	0.23	0.22	0	1.60	0.07	Largest left-hand leaflet
@@ -391,7 +400,7 @@ function app_ignite() {
     const url = new URL(window.location.href);
     const url_params = new URLSearchParams(url.search)
     const root_count = (url_params && url_params.get("root_count")) || 5;
-    window._app = new App(FERN);
+    window._app = new App(FERN_WIP2);
 
     window._app.init();
 }
