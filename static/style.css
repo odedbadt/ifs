@@ -2,8 +2,8 @@
    cursor:crosshair;
    width: 600px;
    height: 600px;
-   top:50px;
-   left: 50px;
+   top:0px;
+   left: 0px;
    position: absolute;
    border: 1px solid black;
    background-color: white;
@@ -12,8 +12,8 @@
    display: grid;
    grid-template-columns: 650px 100px;
    position: absolute;
-   left:0;
-   top:0;
+   left:50;
+   top:50;
 }
 #controls {
    display: grid;
@@ -21,8 +21,9 @@
    grid-template-columns: 2em 10em;
 
 }
-#controls input, #controls label {
-   padding: 10px;
+#select-label {
+   margin-top:5em;
+   grid-column: span 2;
 }
 #controls select {
    grid-column: span 2;

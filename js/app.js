@@ -375,6 +375,7 @@ class App {
         }
         const select = document.getElementById('fractal_select')
         select.innerHTML = ''
+        
         for (let example_name in this.example_catalog) {
             const option_element = document.createElement('option')
             option_element.innerHTML = example_name
@@ -382,6 +383,7 @@ class App {
             select.appendChild(option_element)
 
         }
+        select.value = this.example_name;
         select.addEventListener('change', (event) => {
             this.example_name = event.target.value
             this.dirty = true;
