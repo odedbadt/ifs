@@ -4,17 +4,28 @@ import { vec2, vec3, mat3 } from "gl-matrix"
 (window).vec3 = vec3;
 (window).mat3 = mat3;
 const BASE_COLORS = [
-    'black',
-    'red',
-    'blue',
-    'green',
-    'cyan',
-    [1, 1, 1],
-    [1, 0, 1],
-    [1, 1, 1],
+    '#ef476fff',
+    '#ffd166ff',
+    '#06d6a0ff',
+    '#118ab2ff',
+    '#073b4cff',
+    '#eae4e9ff',
+    '#fff1e6ff',
+    '#fde2e4ff',
+    '#fad2e1ff',
+    '#e2ece9ff',
+    '#bee1e6ff',
+    '#f0efebff',
+    '#dfe7fdff',
+    '#cddafdff',    
 ]
+
+
 //import {Camera, Scene, PlaneBufferGeometry, Vector2, RawShaderMaterial}
-function set_pixel(image_data, w, x, y, r, g, b) {
+function set_pixel(image_data, h, w, x, y, r, g, b) {
+    if (x >w || x< 0 ||y >h || y< 0) {
+        return
+    }
     const base_offset = (w * Math.floor(y) + Math.floor(x)) * 4
     image_data[base_offset] = r
     image_data[base_offset + 1] = g
@@ -53,10 +64,20 @@ function apply_affine_transform(A, v) {
     vec3.transformMat3(result, v3, A);
     return result//vec2.fromValues(result[0], result[1]); // Drop homogeneous coordinate
 }
+function index_of_first_higher_number(sorted_list, number) {
+    for (let j = 0; j < sorted_list.length; ++j) {
+        if (sorted_list[j]> number) {
+            return j
+        }
+    }
 
+}
 class App {
 
-    constructor(definition_points) {
+    constructor(initial_examples, first_example_name) {
+        this.example_catalog = initial_examples
+        this.example_name = first_example_name
+
         this.ifs_canvas = document.getElementById('ifs-canvas');
         this.ifs_context = this.ifs_canvas.getContext('2d', { 'willReadFrequently': true });
         this.w = this.ifs_canvas.width
@@ -64,15 +85,15 @@ class App {
         this.dpr = window.devicePixelRatio;
         this.zoom = 1;
         this.dirty = true
-        this.definition_points = definition_points
+        this.definition_points = [...initial_examples[first_example_name]]
         this.definition_point_handles = []
         this.draw_fractal = true;
         this.draw_control_points = true
     }
     init() {
-        this.init_size()
-        this.init_mouse()
-        this.init_iterations()
+        this.init_size();
+        this.init_mouse();
+        this.init_iterations();
         this.define_handles();
         if (document.getElementById('control-points').checked) {
             this.draw_definition_points();
@@ -82,10 +103,13 @@ class App {
         }
     }
     init_iterations() {
+        const definition_points = [...this.example_catalog[this.example_name]]
         this.possible_iterations = []
-        const arr0 = this.definition_points[0]
-        for (let k = 0; k < this.definition_points.length; ++k) {
-            const arr = this.definition_points[k]
+        this.total_probability_array = []
+        this.total_probability = 0
+        const arr0 = definition_points[0]
+        for (let k = 1; k < definition_points.length; ++k) {
+            const arr = definition_points[k]
             const M = build_affine_transformation(
                 vec2.fromValues(arr0[0], arr0[1]),
                 vec2.fromValues(arr0[2], arr0[3]),
@@ -96,7 +120,10 @@ class App {
             this.possible_iterations.push(
                 (v) => apply_affine_transform(M, v)
             )
+            this.total_probability_array.push(this.total_probability)
+            this.total_probability += arr[6] || 1
         }
+        this.definition_points = definition_points;
         this.p = null;
     }
     animate() {
@@ -117,40 +144,43 @@ class App {
         // ]
 
 
-        
-        this.p = vec2.fromValues(Math.random(), Math.random())
+
+        this.p = vec2.fromValues(0,0);
         ifs_context.fillStyle = 'black'
-        const add_point = () => {
+        const add_point_batch = () => {
             if (this.dirty) {
                 this.ifs_context.clearRect(0, 0, this.w, this.h)
                 this.dirty = false;
             }
             if (this.p == null) {
-                this.p = vec2.fromValues(Math.random(), Math.random())
+                this.p = vec2.fromValues(0,0)
             }
             if (this.draw_control_points) {
                 this.draw_definition_points(false)
             }
             const image_data = ifs_context.getImageData(0, 0, w, h);
             const data = image_data.data
-            
-        
-            for (let k = 0; k < 1000; ++k) {
-                ifs_context.beginPath()
-                set_pixel(data, w, this.p[0] * w, this.p[1] * h, 0, 0, 0)
 
-                const j = Math.floor(Math.random() * this.possible_iterations.length)
-                const iteration = this.possible_iterations[j]
-                this.p = iteration(this.p)
+
+            for (let k = 0; k < 10000; ++k) {
+                ifs_context.beginPath()
+                set_pixel(data, h, w, this.p[0] * w, this.p[1] * h, 0, 0, 0)
+                // const random_number = this.total_probability*Math.random()
+                // const random_iteration = index_of_first_higher_number(this.total_probability_array, random_number)
+                const random_number = Math.floor(Math.random()* this.possible_iterations.length)
+                const iteration = this.possible_iterations[random_number]
+                if (iteration) {
+                    this.p = iteration(this.p)
+                }
             }
 
             ifs_context.putImageData(image_data, 0, 0)
             if (this.draw_fractal) {
-            setTimeout(add_point, 10)
+                setTimeout(add_point_batch, 10)
             }
         }
         if (this.draw_fractal) {
-            setTimeout(add_point, 100)
+            setTimeout(add_point_batch, 100)
         }
 
     }
@@ -222,10 +252,10 @@ class App {
                 this.ifs_context.fillStyle = BASE_COLORS[j / 2 + 1]
                 this.ifs_context.strokeStyle = BASE_COLORS[k]
                 this.ifs_context.beginPath();
-                this.ifs_context.ellipse(x1 * w, y1 * h, 15, 15, 0, 0, Math.PI * 2);
+                this.ifs_context.ellipse(x1 * w, y1 * h, 5, 5, 0, 0, Math.PI * 2);
                 this.ifs_context.fill();
                 this.ifs_context.lineWidth = 2
-                this.ifs_context.stroke()
+                //this.ifs_context.stroke()
                 this.ifs_context.beginPath();
             }
             this.ifs_context.save()
@@ -248,7 +278,7 @@ class App {
                 this.ifs_context.moveTo(x1 * w, y1 * h);
                 this.ifs_context.lineTo(x2 * w, y2 * h);
                 this.ifs_context.strokeStyle = BASE_COLORS[k]
-                this.ifs_context.lineWidth = k == 0 ? 5 : 0.5
+                this.ifs_context.lineWidth = k == 0 ? 2 : 0.5
                 this.ifs_context.stroke();
                 // this.ifs_context.beginPath();          
                 // this.ifs_context.moveTo(x1*w, y1*h);
@@ -273,10 +303,10 @@ class App {
 
             this.ifs_context.fillStyle = BASE_COLORS[idx]
             // this.ifs_context.beginPath();
-            // this.ifs_context.ellipse(x1*w, y1*h, 5, 5, 0, 0, Math.PI * 2);
+            // this.ifs_context.ellipsse(x1*w, y1*h, 5, 5, 0, 0, Math.PI * 2);
             // this.ifs_context.fill();    
             this.ifs_context.beginPath();
-            this.ifs_context.ellipse(x2 * w, y2 * h, 5, 5, 0, 0, Math.PI * 2);
+            this.ifs_context.ellipse(x2 * w, y2 * h, 2, 2, 0, 0, Math.PI * 2);
             this.ifs_context.fill();
             this.ifs_context.strokeStyle = BASE_COLORS[idx2]
             this.ifs_context.lineWidth = 2
@@ -335,6 +365,7 @@ class App {
             this.hit = null;
         })
         const inputs = document.getElementsByTagName('input')
+
         for (let input of inputs) {
             input.addEventListener('change', () => {
                 this.dirty = true;
@@ -342,8 +373,23 @@ class App {
                 this.draw_control_points = document.getElementById('control-points').checked
             })
         }
-    }
+        const select = document.getElementById('fractal_select')
+        select.innerHTML = ''
+        for (let example_name in this.example_catalog) {
+            const option_element = document.createElement('option')
+            option_element.innerHTML = example_name
+            option_element.value = example_name
+            select.appendChild(option_element)
 
+        }
+        select.addEventListener('change', (event) => {
+            this.example_name = event.target.value
+            this.dirty = true;
+            this.init_iterations();
+            this.define_handles();
+        })
+
+    }
 }
 
 
@@ -363,27 +409,27 @@ const SIERPINSKY = [[
     0, 1
 ]]
 const SQ34 = Math.sqrt(0.75)
-const SIERPINSKY2 = [
+const SIERPINSKY_EQUI = [
     [
-    .5, 0,
-    0, SQ34,
-    1, SQ34
-],
-[
-    .5, 0,
-    .25, SQ34/2,
-    .75, SQ34/2
-],
-[
-    .25, SQ34/2,
-    0, SQ34,
-    .5, SQ34
-],
-[
-    .75, SQ34/2,
-    .5, SQ34,
-    1, SQ34
-]]
+        .5, 0,
+        0, SQ34,
+        1, SQ34
+    ],
+    [
+        .5, 0,
+        .25, SQ34 / 2,
+        .75, SQ34 / 2
+    ],
+    [
+        .25, SQ34 / 2,
+        0, SQ34,
+        .5, SQ34
+    ],
+    [
+        .75, SQ34 / 2,
+        .5, SQ34,
+        1, SQ34
+    ]]
 const BUG1_WOW = [[
     0, 0,
     1, 0,
@@ -404,40 +450,32 @@ const BUG1_WOW = [[
     0.5, 0.5,
     0, 0
 ]]
-const FERN = [[
-    0,0,
-    0,1,
-    1,0,
-],
-[ 0.  ,  0.  ,  0.  ,  0.16,  0.  ,  0.16],
-       [ 0.  ,  1 ,  0.04,  0.85,  0.89,  .41],
-       [ 0.  ,  1 ,  0.26,  0.22,  0.06,  .05],
-       [ 0.  ,  0.4,  0.2,  0.24,  0.13,  0.94]
+const FERN = [[0,0.9916943521594684,0.1877076411960133,0.23588039867109634,1,1],
+[0.42358803986710963,0.7225913621262459,0.059800664451827246,0.5548172757475083,0.3554817275747508,0.8156146179401993,90],
+[0.4700996677740864,0.6943521594684385,0.7574750830564784,0.49335548172757476,0.6129568106312292,0.8073089700996677,1],
+[0.4584717607973422,0.8604651162790697,0.4269102990033223,0.9916943521594684,0.4269102990033223,0.9916943521594684,1],
+[0.09800664451827246,0.9501661129568106,0.16279069767441862,0.16777408637873759,0.9368770764119602,0.739202657807309,1]
 ]
-const FERN_WIP = [
-    [0,0.008305647840531562,0.013289036544850499,0.9916943521594684,1,0],
-    [0.3588039867109635,0.29069767441860467,0.11461794019933555,0.132890365448505,0.42524916943521596,0.22757475083056478],
-    [0.49667774086378735,0.20431893687707642,0.659468438538206,0.5614617940199336,0.41029900332225916,0.3122923588039867],[0.4335548172757475,0.1378737541528239,0.43853820598006643,0.0016611295681063123,0.4750830564784053,0.018272425249169437],[0.31727574750830567,0.059800664451827246,0.046511627906976744,0.9186046511627907,0.739202657807309,0.6079734219269103]]
-const FERN_WIP2 = [[0.521594684385382,0.6794019933554817,0.287375415282392,0.2691029900332226,0.8554817275747508,0.28903654485049834],[0.2691029900332226,0.5099667774086378,0.5049833887043189,0.33554817275747506,0.5498338870431894,0.49667774086378735],[0.5448504983388704,0.4269102990033223,0.5448504983388704,0.2840531561461794,0.5581395348837209,0.2823920265780731],[0.5282392026578073,0.6677740863787376,0.29900332225913623,0.4069767441860465,0.8172757475083057,0.3023255813953488],[0.8056478405315615,0.5182724252491694,0.5813953488372093,0.3289036544850498,0.5083056478405316,0.4850498338870432]]
-const FERN_CHATGPT = [[
-    0,0,
-    0,1,
-    1,0,
-],
-    [0.4979, 0.4372, 0.4979, 0.4372, 0.4979, 0.5972],
-    [0.4979, 0.5506, 1.3479, 0.5106, 0.5379, 1.4006],
-    [0.4979, 0.5506, 0.6979, 0.7806, 0.2379, 0.7706],
-    [0.4979, 0.4783, 0.3479, 0.7383, 0.7779, 0.7183]
-  ]
+
+const EIFFEL = [[0.5,0,0,0.8660254037844386,1,0.8660254037844386],[0.5,0,0.5598006644518272,0.5182724252491694,0.45182724252491696,0.5049833887043189],[0.45348837209302323,0.5132890365448505,0,0.8660254037844386,0.526578073089701,0.840531561461794],[0.5598006644518272,0.5232558139534884,0.526578073089701,0.840531561461794,1,0.8660254037844386]]
+const PAALULA = [[0.6229235880398671, 0.21760797342192692, 0.4269102990033223, 0.5913621262458472, 0.7906976744186046, 0.7225913621262459], [0.6229235880398671, 0.21760797342192692, 0.5282392026578073, 0.7259136212624585, 0.75, 0.4330127018922193], [0.5282392026578073, 0.7259136212624585, 0.4269102990033223, 0.5913621262458472, 0.49335548172757476, 0.5382059800664452], [0.75, 0.4330127018922193, 0.49335548172757476, 0.5382059800664452, 0.7906976744186046, 0.7225913621262459]]
 // 0	0	0	0.16	0	0	0.01	Stem
 // f2	0.85	0.04	−0.04	0.85	0	1.60	0.85	Successively smaller leaflets
 // f3	0.20	−0.26	0.23	0.22	0	1.60	0.07	Largest left-hand leaflet
 // f4	−0.15	0.28	0.26	0.24	0	0.44	0.07	Largest right-hand leaflet
+const examples = {
+    sierpinsky: SIERPINSKY,
+    sierpinsky_equilateral: SIERPINSKY_EQUI,
+    bug_wow: BUG1_WOW,
+    fern: FERN,
+    paalula: PAALULA,
+    eiffel: EIFFEL
+}
 function app_ignite() {
     const url = new URL(window.location.href);
     const url_params = new URLSearchParams(url.search)
     const root_count = (url_params && url_params.get("root_count")) || 5;
-    window._app = new App(FERN_WIP2);
+    window._app = new App(examples, 'fern');
 
     window._app.init();
 }

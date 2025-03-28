@@ -3,16 +3,20 @@
 <head>
     <title>Interactive Newton fractal</title>
     <link type="text/css" rel="stylesheet" href="static/style.css">
-    <link rel="icon" type="image/x-icon" href="static/ifs.png">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/water.css@2/out/dark.css">
+        <link rel="icon" type="image/x-icon" href="static/ifs.png">
     <script type="module" src="dist/bundle.js" defer></script>
 </head>
 
 <body>
-    <canvas id="ifs-canvas"></canvas>
-    <div id="controls">
-        <input type="checkbox" checked="true" value="control-points" id="control-points" name="control-points">
-        <label for="control-points">Control Points</label>
-        <input type="checkbox" checked="true" value="fractal" id="fractal" name="fractal">
-        <label for="fractal">Fractal</label>
+    <div id="main-div">
+        <div><canvas id="ifs-canvas"></canvas></div>
+        <div id="controls">
+            <input type="checkbox" checked="true" value="control-points" id="control-points" name="control-points">
+            <label for="control-points">Control Points</label>
+            <input type="checkbox" checked="true" value="fractal" id="fractal" name="fractal">
+            <label for="fractal">Fractal</label>
+            <select id="fractal_select"></select>
+        </div>
     </div>
 </html>
