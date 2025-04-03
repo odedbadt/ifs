@@ -64,12 +64,16 @@ function apply_affine_transform(A, v) {
     vec3.transformMat3(result, v3, A);
     return result//vec2.fromValues(result[0], result[1]); // Drop homogeneous coordinate
 }
-function index_of_first_higher_number(sorted_list, number) {
+function index_of_last_lower_number(sorted_list, number) {
+    if (number < sorted_list[0]) {
+        return null;
+    }
     for (let j = 0; j < sorted_list.length; ++j) {
         if (sorted_list[j]> number) {
-            return j
+            return j-1
         }
     }
+    return sorted_list.length - 1 
 
 }
 class App {
@@ -147,7 +151,7 @@ class App {
 
         this.p = vec2.fromValues(0,0);
         ifs_context.fillStyle = 'black'
-        const add_point_batch = () => {
+        const add_point_batch = (batch_size) => {
             if (this.dirty) {
                 this.ifs_context.clearRect(0, 0, this.w, this.h)
                 this.dirty = false;
@@ -162,13 +166,13 @@ class App {
             const data = image_data.data
 
 
-            for (let k = 0; k < 10000; ++k) {
+            for (let k = 0; k < batch_size; ++k) {
                 ifs_context.beginPath()
                 set_pixel(data, h, w, this.p[0] * w, this.p[1] * h, 0, 0, 0)
-                // const random_number = this.total_probability*Math.random()
-                // const random_iteration = index_of_first_higher_number(this.total_probability_array, random_number)
-                const random_number = Math.floor(Math.random()* this.possible_iterations.length)
-                const iteration = this.possible_iterations[random_number]
+                const random_number = this.total_probability*Math.random()
+                const random_iteration = index_of_last_lower_number(this.total_probability_array, random_number)
+                const chosen_iteration_idx = Math.floor(Math.random()* this.possible_iterations.length)
+                const iteration = this.possible_iterations[random_iteration]
                 if (iteration) {
                     this.p = iteration(this.p)
                 }
@@ -176,11 +180,11 @@ class App {
 
             ifs_context.putImageData(image_data, 0, 0)
             if (this.draw_fractal) {
-                setTimeout(add_point_batch, 10)
+                setTimeout(() => add_point_batch(Math.min(10000, batch_size* 2) ), 10)
             }
         }
         if (this.draw_fractal) {
-            setTimeout(add_point_batch, 100)
+            setTimeout(() => add_point_batch(10000), 0)
         }
 
     }
@@ -415,22 +419,22 @@ const SIERPINSKY_EQUI = [
     [
         .5, 0,
         0, SQ34,
-        1, SQ34
+        1, SQ34,1
     ],
     [
         .5, 0,
         .25, SQ34 / 2,
-        .75, SQ34 / 2
+        .75, SQ34 / 2,1
     ],
     [
         .25, SQ34 / 2,
         0, SQ34,
-        .5, SQ34
+        .5, SQ34,1
     ],
     [
         .75, SQ34 / 2,
         .5, SQ34,
-        1, SQ34
+        1, SQ34,10
     ]]
 const BUG1_WOW = [[
     0, 0,
@@ -453,11 +457,12 @@ const BUG1_WOW = [[
     0, 0
 ]]
 const FERN = [[0,0.9916943521594684,0.1877076411960133,0.23588039867109634,1,1],
-[0.42358803986710963,0.7225913621262459,0.059800664451827246,0.5548172757475083,0.3554817275747508,0.8156146179401993,90],
-[0.4700996677740864,0.6943521594684385,0.7574750830564784,0.49335548172757476,0.6129568106312292,0.8073089700996677,1],
+[0.42358803986710963,0.7225913621262459,0.059800664451827246,0.5548172757475083,0.3554817275747508,0.8156146179401993,1],
+[0.4700996677740864,0.6943521594684385,0.7574750830564784,0.49335548172757476,0.6129568106312292,0.8073089700996677,4],
 [0.4584717607973422,0.8604651162790697,0.4269102990033223,0.9916943521594684,0.4269102990033223,0.9916943521594684,1],
-[0.09800664451827246,0.9501661129568106,0.16279069767441862,0.16777408637873759,0.9368770764119602,0.739202657807309,1]
+[0.09800664451827246,0.9501661129568106,0.16279069767441862,0.16777408637873759,0.9368770764119602,0.739202657807309,8]
 ]
+const FERN_WIP = [[0,0.9916943521594684,0.29401993355481726,0.37375415282392027,1,1],[0.42358803986710963,0.7225913621262459,0.059800664451827246,0.5548172757475083,0.3554817275747508,0.8156146179401993,90],[0.4700996677740864,0.6943521594684385,0.8388704318936877,0.3953488372093023,0.6129568106312292,0.8073089700996677,1],[0.4584717607973422,0.8604651162790697,0.4269102990033223,0.9916943521594684,0.4269102990033223,0.9916943521594684,1],[0.10465116279069768,0.8438538205980066,0.27906976744186046,0.33554817275747506,0.9368770764119602,0.739202657807309,1]]
 
 const EIFFEL = [[0.5,0,0,0.8660254037844386,1,0.8660254037844386],[0.5,0,0.5598006644518272,0.5182724252491694,0.45182724252491696,0.5049833887043189],[0.45348837209302323,0.5132890365448505,0,0.8660254037844386,0.526578073089701,0.840531561461794],[0.5598006644518272,0.5232558139534884,0.526578073089701,0.840531561461794,1,0.8660254037844386]]
 const PAALULA = [[0.6229235880398671, 0.21760797342192692, 0.4269102990033223, 0.5913621262458472, 0.7906976744186046, 0.7225913621262459], [0.6229235880398671, 0.21760797342192692, 0.5282392026578073, 0.7259136212624585, 0.75, 0.4330127018922193], [0.5282392026578073, 0.7259136212624585, 0.4269102990033223, 0.5913621262458472, 0.49335548172757476, 0.5382059800664452], [0.75, 0.4330127018922193, 0.49335548172757476, 0.5382059800664452, 0.7906976744186046, 0.7225913621262459]]
