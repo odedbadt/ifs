@@ -1,8 +1,4 @@
-import * as THREE from 'three'
 import { vec2, vec3, mat3 } from "gl-matrix"
-(window).vec2 = vec2;
-(window).vec3 = vec3;
-(window).mat3 = mat3;
 const BASE_COLORS = [
     '#ef476fff',
     '#ffd166ff',
@@ -21,18 +17,7 @@ const BASE_COLORS = [
 ]
 
 
-//import {Camera, Scene, PlaneBufferGeometry, Vector2, RawShaderMaterial}
-function set_pixel(image_data, h, w, x, y, r, g, b) {
-    if (x >w || x< 0 ||y >h || y< 0) {
-        return
-    }
-    const base_offset = (w * Math.floor(y) + Math.floor(x)) * 4
-    image_data[base_offset] = r
-    image_data[base_offset + 1] = g
-    image_data[base_offset + 2] = b
-    image_data[base_offset + 3] = 255
-
-}
+const PIXEL_BLACK = 0xFF000000; // ABGR: opaque black
 function build_affine_transformation(p1, p2, p3, q1, q2, q3) {
     let P = mat3.fromValues(
         p1[0], p1[1], 1,
@@ -62,7 +47,7 @@ function apply_affine_transform(A, v) {
     let v3 = vec3.fromValues(v[0], v[1], 1); // Convert vec2 → vec3 (homogeneous coords)
     let result = vec3.create();
     vec3.transformMat3(result, v3, A);
-    return result//vec2.fromValues(result[0], result[1]); // Drop homogeneous coordinate
+    return result;
 }
 function index_of_last_lower_number(sorted_list, number) {
     if (number < sorted_list[0]) {
@@ -83,12 +68,14 @@ class App {
         this.example_name = first_example_name
 
         this.ifs_canvas = document.getElementById('ifs-canvas');
-        this.ifs_context = this.ifs_canvas.getContext('2d', { 'willReadFrequently': true });
+        this.ifs_context = this.ifs_canvas.getContext('2d');
         this.w = this.ifs_canvas.width
         this.h = this.ifs_canvas.height
         this.dpr = window.devicePixelRatio;
-        this.zoom = 1;
         this.dirty = true
+        this.imageData = null
+        this.buf32 = null
+        this.animFrameId = null
         this.definition_points = [...initial_examples[first_example_name]]
         this.definition_point_handles = []
         this.draw_fractal = true;
@@ -130,63 +117,62 @@ class App {
         this.definition_points = definition_points;
         this.p = null;
     }
+    allocateBuffer() {
+        this.imageData = this.ifs_context.createImageData(this.w, this.h);
+        this.buf32 = new Uint32Array(this.imageData.data.buffer);
+    }
+    clearBuffer() {
+        this.buf32.fill(0);
+    }
+    iteratePoints(count) {
+        const w = this.w;
+        const h = this.h;
+        const buf32 = this.buf32;
+        if (this.p == null) {
+            this.p = vec2.fromValues(0, 0);
+        }
+        for (let k = 0; k < count; ++k) {
+            const px = Math.floor(this.p[0] * w);
+            const py = Math.floor(this.p[1] * h);
+            if (px >= 0 && px < w && py >= 0 && py < h) {
+                buf32[py * w + px] = PIXEL_BLACK;
+            }
+            const random_number = this.total_probability * Math.random();
+            const random_iteration = index_of_last_lower_number(this.total_probability_array, random_number);
+            const iteration = this.possible_iterations[random_iteration];
+            if (iteration) {
+                this.p = iteration(this.p);
+            }
+        }
+    }
     animate() {
-        const ifs_context = this.ifs_canvas.getContext('2d');
-        const w = this.ifs_canvas.width
-        const h = this.ifs_canvas.height
-        // const base_iteration = (p, v) => {
-        //     const out = vec2.create()
-        //     vec2.add(out, p, v)
-        //     vec2.scale(out, out, .5)
-        //     return out
-        // }
-        const t30 = 0.5 / Math.tan(Math.PI / 6)
-        // const possible_iterations = [
-        //     (v) => base_iteration(vec2.fromValues(0,1),v),
-        //     (v) => base_iteration(vec2.fromValues(1,1),v),
-        //     (v) => base_iteration(vec2.fromValues(0.5,1-t30),v)
-        // ]
+        if (this.animFrameId != null) {
+            cancelAnimationFrame(this.animFrameId);
+            this.animFrameId = null;
+        }
+        this.p = vec2.fromValues(0, 0);
+        this.allocateBuffer();
 
+        const POINTS_PER_FRAME = 50000;
 
-
-        this.p = vec2.fromValues(0,0);
-        ifs_context.fillStyle = 'black'
-        const add_point_batch = (batch_size) => {
+        const frame = () => {
+            if (!this.draw_fractal) {
+                this.animFrameId = null;
+                return;
+            }
             if (this.dirty) {
-                this.ifs_context.clearRect(0, 0, this.w, this.h)
+                this.clearBuffer();
+                this.p = vec2.fromValues(0, 0);
                 this.dirty = false;
             }
-            if (this.p == null) {
-                this.p = vec2.fromValues(0,0)
-            }
+            this.iteratePoints(POINTS_PER_FRAME);
+            this.ifs_context.putImageData(this.imageData, 0, 0);
             if (this.draw_control_points) {
-                this.draw_definition_points(false)
+                this.draw_definition_points(false);
             }
-            const image_data = ifs_context.getImageData(0, 0, w, h);
-            const data = image_data.data
-
-
-            for (let k = 0; k < batch_size; ++k) {
-                ifs_context.beginPath()
-                set_pixel(data, h, w, this.p[0] * w, this.p[1] * h, 0, 0, 0)
-                const random_number = this.total_probability*Math.random()
-                const random_iteration = index_of_last_lower_number(this.total_probability_array, random_number)
-                const chosen_iteration_idx = Math.floor(Math.random()* this.possible_iterations.length)
-                const iteration = this.possible_iterations[random_iteration]
-                if (iteration) {
-                    this.p = iteration(this.p)
-                }
-            }
-
-            ifs_context.putImageData(image_data, 0, 0)
-            if (this.draw_fractal) {
-                setTimeout(() => add_point_batch(Math.min(10000, batch_size* 2) ), 10)
-            }
-        }
-        if (this.draw_fractal) {
-            setTimeout(() => add_point_batch(10000), 0)
-        }
-
+            this.animFrameId = requestAnimationFrame(frame);
+        };
+        this.animFrameId = requestAnimationFrame(frame);
     }
     count_handles_to_point(v) {
         let c = 0
@@ -259,37 +245,23 @@ class App {
                 this.ifs_context.ellipse(x1 * w, y1 * h, 5, 5, 0, 0, Math.PI * 2);
                 this.ifs_context.fill();
                 this.ifs_context.lineWidth = 2
-                //this.ifs_context.stroke()
                 this.ifs_context.beginPath();
             }
             this.ifs_context.save()
             this.ifs_context.lineWidth = 0.5
-            const l = arr.length // 6
-            const hl = l / 2 // 6
+            const l = arr.length
             for (let j = 0; j < l; j += 2) {
-                // 2*3*2
-                const m = Math.floor(j / 6)
-                const n = j % 6
-                // const in_next_tri = ((m + 1) % 2)*6+n
-                const next_in_tri = (j + 2) % 6// m*6+((n + 2) % 6)                 
+                const next_in_tri = (j + 2) % 6
                 const x1 = arr[j]
                 const y1 = arr[j + 1]
                 const x2 = arr[next_in_tri]
                 const y2 = arr[next_in_tri + 1]
-                // const x3 = arr[in_next_tri]
-                // const y3 = arr[in_next_tri+1]
                 this.ifs_context.beginPath();
                 this.ifs_context.moveTo(x1 * w, y1 * h);
                 this.ifs_context.lineTo(x2 * w, y2 * h);
                 this.ifs_context.strokeStyle = BASE_COLORS[k]
                 this.ifs_context.lineWidth = k == 0 ? 2 : 0.5
                 this.ifs_context.stroke();
-                // this.ifs_context.beginPath();          
-                // this.ifs_context.moveTo(x1*w, y1*h);
-                // this.ifs_context.lineTo(x3*w, y3*h);
-                // this.ifs_context.strokeStyle = 'red'                
-                // this.ifs_context.lineWidth = 1
-                // this.ifs_context.stroke();          
             }
             this.ifs_context.restore()
 
@@ -306,9 +278,6 @@ class App {
             const y2 = v2[1]
 
             this.ifs_context.fillStyle = BASE_COLORS[idx]
-            // this.ifs_context.beginPath();
-            // this.ifs_context.ellipsse(x1*w, y1*h, 5, 5, 0, 0, Math.PI * 2);
-            // this.ifs_context.fill();    
             this.ifs_context.beginPath();
             this.ifs_context.ellipse(x2 * w, y2 * h, 2, 2, 0, 0, Math.PI * 2);
             this.ifs_context.fill();
@@ -334,6 +303,9 @@ class App {
             this.w = this.ifs_canvas.width
             this.h = this.ifs_canvas.height
             this.dirty = true;
+            if (this.buf32) {
+                this.allocateBuffer();
+            }
         }
         onWindowResize();
 
@@ -364,6 +336,7 @@ class App {
                 this.draw_definition_points(true)
             }
             this.init_iterations()
+            this.dirty = true
         })
         this.ifs_canvas.addEventListener('mouseup', (event) => {
             this.hit = null;
@@ -462,26 +435,23 @@ const FERN = [[0,0.9916943521594684,0.1877076411960133,0.23588039867109634,1,1],
 [0.4584717607973422,0.8604651162790697,0.4269102990033223,0.9916943521594684,0.4269102990033223,0.9916943521594684,1],
 [0.09800664451827246,0.9501661129568106,0.16279069767441862,0.16777408637873759,0.9368770764119602,0.739202657807309,8]
 ]
-const FERN_WIP = [[0,0.9916943521594684,0.29401993355481726,0.37375415282392027,1,1],[0.42358803986710963,0.7225913621262459,0.059800664451827246,0.5548172757475083,0.3554817275747508,0.8156146179401993,90],[0.4700996677740864,0.6943521594684385,0.8388704318936877,0.3953488372093023,0.6129568106312292,0.8073089700996677,1],[0.4584717607973422,0.8604651162790697,0.4269102990033223,0.9916943521594684,0.4269102990033223,0.9916943521594684,1],[0.10465116279069768,0.8438538205980066,0.27906976744186046,0.33554817275747506,0.9368770764119602,0.739202657807309,1]]
+const FERN_WIP = [[0,0.9916943521594684,0.29401993355481726,0.37375415282392027,1,1],
+[0.42358803986710963,0.7225913621262459,0.059800664451827246,0.5548172757475083,0.3554817275747508,0.8156146179401993,4],
+[0.4700996677740864,0.6943521594684385,0.8388704318936877,0.3953488372093023,0.6129568106312292,0.8073089700996677,4],
+[0.4584717607973422,0.8604651162790697,0.4269102990033223,0.9916943521594684,0.4269102990033223,0.9916943521594684,1],
+[0.10465116279069768,0.8438538205980066,0.27906976744186046,0.33554817275747506,0.9368770764119602,0.739202657807309,8]]
 
 const EIFFEL = [[0.5,0,0,0.8660254037844386,1,0.8660254037844386],[0.5,0,0.5598006644518272,0.5182724252491694,0.45182724252491696,0.5049833887043189],[0.45348837209302323,0.5132890365448505,0,0.8660254037844386,0.526578073089701,0.840531561461794],[0.5598006644518272,0.5232558139534884,0.526578073089701,0.840531561461794,1,0.8660254037844386]]
 const PAALULA = [[0.6229235880398671, 0.21760797342192692, 0.4269102990033223, 0.5913621262458472, 0.7906976744186046, 0.7225913621262459], [0.6229235880398671, 0.21760797342192692, 0.5282392026578073, 0.7259136212624585, 0.75, 0.4330127018922193], [0.5282392026578073, 0.7259136212624585, 0.4269102990033223, 0.5913621262458472, 0.49335548172757476, 0.5382059800664452], [0.75, 0.4330127018922193, 0.49335548172757476, 0.5382059800664452, 0.7906976744186046, 0.7225913621262459]]
-// 0	0	0	0.16	0	0	0.01	Stem
-// f2	0.85	0.04	−0.04	0.85	0	1.60	0.85	Successively smaller leaflets
-// f3	0.20	−0.26	0.23	0.22	0	1.60	0.07	Largest left-hand leaflet
-// f4	−0.15	0.28	0.26	0.24	0	0.44	0.07	Largest right-hand leaflet
 const examples = {
     sierpinsky: SIERPINSKY,
     sierpinsky_equilateral: SIERPINSKY_EQUI,
     bug_wow: BUG1_WOW,
-    fern: FERN,
+    fern: FERN_WIP,
     paalula: PAALULA,
     eiffel: EIFFEL
 }
 function app_ignite() {
-    const url = new URL(window.location.href);
-    const url_params = new URLSearchParams(url.search)
-    const root_count = (url_params && url_params.get("root_count")) || 5;
     window._app = new App(examples, 'fern');
 
     window._app.init();
